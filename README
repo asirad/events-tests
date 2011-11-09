@@ -1,21 +1,43 @@
 == Description
-Test Android events from ADB shell
+This tool allows to test Android events via ADB shell. It is possible to create two types of events: 
+KEYCODE events and TOUCH events. Real power of this tool is when this two types working together.
 
 == Example
-    # Configure Project 
-    require './lib/setenv.rb'
-    include SetEnv
-    
-    # Require all important files from library
-    require 'click.rb'
-    
-    # Run test
-    click = Events::Click.new
-    click.create
-    click.add(:KEYCODE_DPAD_RIGHT)
-    click.add(:KEYCODE_DPAD_RIGHT)
-    click.add(:KEYCODE_DPAD_CENTER)
-    click.add(:KEYCODE_DPAD_LEFT)
-    click.add(:KEYCODE_DPAD_LEFT)
-    click.send_text(1234)
-    click.run
+This tool allows to create two types of sequences<br>
+KECODE sequence:
+  # Configure Project 
+  require './lib/setenv.rb'
+  include SetEnv
+  
+  # Require all important files from library
+  require 'click.rb'
+  
+  # Run test
+  click = Events::Click.new
+  click.create
+  click.add(:KEYCODE_DPAD_RIGHT)
+  click.add(:KEYCODE_DPAD_RIGHT)
+  click.add(:KEYCODE_DPAD_CENTER)
+  click.add(:KEYCODE_DPAD_LEFT)
+  click.add(:KEYCODE_DPAD_LEFT)
+  click.send_text(1234)
+  click.run
+  
+EVENT sequence:
+  #Configure Project
+  require './lib/setenv.rb'
+  include SetEnv
+  
+  # Require all importan files from library
+  require 'touch.rb'
+  touch = Events::Touch.new
+  
+  # Record events
+  touch.create
+  seq = touch.record(10)
+  seq += touch.record(10, :drag_and_drop)
+  seq += touch.record(10, :drag_and_drop)
+  
+  # Create sequence and run it
+  touch.add seq
+  touch.run
