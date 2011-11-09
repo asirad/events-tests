@@ -1,0 +1,21 @@
+== Description
+Test Android events from ADB shell
+
+== Example
+    # Configure Project 
+    require './lib/setenv.rb'
+    include SetEnv
+    
+    # Require all important files from library
+    require 'click.rb'
+    
+    # Run test
+    click = Events::Click.new
+    click.create
+    click.add(:KEYCODE_DPAD_RIGHT)
+    click.add(:KEYCODE_DPAD_RIGHT)
+    click.add(:KEYCODE_DPAD_CENTER)
+    click.add(:KEYCODE_DPAD_LEFT)
+    click.add(:KEYCODE_DPAD_LEFT)
+    click.send_text(1234)
+    click.run
