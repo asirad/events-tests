@@ -5,18 +5,17 @@ include SetEnv
 require 'touch.rb'
 touch = Events::Touch.new
 touch.create
+touch.delay_between_cmd = 10
+touch.steps = 6
 
 puts "Recording click - Programs button"
-seq = touch.record(10)
+touch.add(touch.record(10))
 
 puts "Recording drag and drop - Drag and drop Contacts icon to main desktop"
-seq += touch.record(10, :drag_and_drop)
+touch.add(touch.record(10, :drag_and_drop))
 
 puts "Recording drag and drop - Remove Contacts icon from main screen"
-seq += touch.record(10, :drag_and_drop)
-
-puts "Add recorded results to sequence steps"
-touch.add(seq)
+touch.add(touch.record(10, :soft_drag_and_drop))
 
 puts "Execute steps"
 touch.run

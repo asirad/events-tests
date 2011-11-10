@@ -6,13 +6,21 @@ module Events
   
   # @author Asirad
   # Class to handle touch events e.g. drag and drop some item
-  # @todo TODO: Implement touch speed.
-  #       It should be possible to set speed and to do this clear method should be able
-  #       to select more than start and end points of direction
+  # @todo TODO: Check scrolling option.
+  #       It should be possible to scroll pages but I didn't have time to check that
   class Touch
     
     
     attr_reader :recorded
+    attr_accessor :steps, :delay_between_cmd
+    
+    
+    # Costructor
+    def initialize
+      @steps = 3
+      @events_number = 0
+      @delay_between_cmd = 5
+    end
     
     
     # Record touch events
@@ -35,26 +43,34 @@ module Events
       filter_only_events
       hex_to_dec
       clear_drag_and_drop if option.to_s == "drag_and_drop"
+      clear_soft_drag_and_drop(@steps) if option.to_s == "soft_drag_and_drop"
+      puts @recorded
       @recorded
     end
     
     
     # Create new touch sequence
     def create
-      @touch_seq = ''
+      @touch_seq = []
+      @events_number = 0
       true
     end
     
     
     # Add last recorded touch events to touch sequence
     def add(recorded)
-      recorded.each_line { |line| @touch_seq += "adb shell sendevent #{line}" }
+      @touch_seq[@events_number] = ''
+      recorded.each_line { |line| @touch_seq[@events_number] += "adb shell sendevent #{line}" }
+      @events_number += 1
     end
     
     
     # Run touch sequence
     def run
-      `#{@touch_seq}`
+      @touch_seq.each do |e|
+        `#{e}`
+        sleep @delay_between_cmd
+      end
     end
     
     
@@ -94,7 +110,6 @@ module Events
     # @note ADB tool returns a lot events. It takes a lot time to reproduce action.
     #       ADB needs only few first points and last to reproduce path
     def clear_drag_and_drop
-      debugger
       if @recorded.lines.count > 20
         cleared = []
         table_to_clear = @recorded.split(/\n/)
@@ -102,10 +117,10 @@ module Events
         cleared << table_to_clear[0..3]
         cleared << find_element_entry(table_to_clear, :first_0)
         cleared << find_element_entry(table_to_clear, :first_1)
-        0.upto(5) { cleared << find_element_entry(table_to_clear, :null) }
+        0.upto(3) { cleared << find_element_entry(table_to_clear, :null) }
         cleared << find_element_entry(table_to_clear, :last_0)
         cleared << find_element_entry(table_to_clear, :last_1)
-        0.upto(5) { cleared << find_element_entry(table_to_clear, :null) }
+        0.upto(3) { cleared << find_element_entry(table_to_clear, :null) }
         cleared << table_to_clear[last-1..last]
         cleared.flatten!
         
@@ -146,8 +161,86 @@ module Events
         end
       end
     end
-
+    
+    
+    # Method to generate soft move between start and end points
+    # @param [Integer] steps Number of steps between start and end
+    # @return [String] Returns sequence
+    def clear_soft_drag_and_drop(steps)
+      if @recorded.lines.count > 20
+        cleared = []
+        table_to_clear = @recorded.split(/\n/)
+        last = table_to_clear.size-1
+        steps = find_elements(table_to_clear, steps)
+        cleared << table_to_clear[0..3]
+        steps.each do |i|
+          cleared << i[0]
+          cleared << i[1]
+          0.upto(3) { |n| cleared << '/dev/input/event0 0 0 0' }
+        end
+        cleared << table_to_clear[last-5..last]
+        cleared.flatten!
         
+        @recorded = ''
+        cleared.each do |e|
+          @recorded += "#{e}\n"
+        end
+      end
+    end
+    
+    
+    # Method to find specific number of elements
+    # @note This method is used to build soft move
+    # @param [Array] table Entries where method should find specific entries
+    # @param [Integer] number Number of elements to find
+    # @return [Array] Returns array of entries
+    def find_elements(table, number)
+      list_of_moves = []
+      results = []
+      matches = []
+      step_size = []
+      selected_step_size = 0
+      selected_direction = nil
+      matches << table.grep(/.*0003\s0\s.*/)
+      matches << table.grep(/.*0003\s1\s.*/)
+      step_size << matches[0].size.to_i / number
+      step_size << matches[1].size.to_i / number
+      if step_size[0] > step_size[1]
+        selected_step_size = step_size[0]
+        selected_direction = 0
+      else
+        selected_step_size = step_size[1]
+        selected_direction = 1
+      end
+      
+      0.upto(number) do |i|
+        list_of_moves << matches[selected_direction][i*selected_step_size]
+      end
+      
+      found = 0
+      last_0 = nil
+      last_1 = nil
+      table.each_with_index do |e|
+        if selected_direction == 1
+          if e =~ /.*0003\s0\s.*/
+            last_0 = e
+          end
+        else
+          if e =~ /.*0003\s1\s.*/
+            last_1 = e
+          end
+        end
+        if e == list_of_moves[found]
+          results[found] = [ last_0, e ] if selected_direction == 1
+          results[found] = [ e, last_1 ] if selected_direction == 0
+          found += 1
+        end
+      end
+      
+      results
+    end
+    
+    
   end
   
   
