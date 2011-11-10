@@ -1,4 +1,4 @@
-require 'ruby-debug'
+require "basic.rb"
 
 
 module Events
@@ -8,11 +8,11 @@ module Events
   # Class to handle touch events e.g. drag and drop some item
   # @todo TODO: Check scrolling option.
   #       It should be possible to scroll pages but I didn't have time to check that
-  class Touch
+  class Touch < Basic
     
     
     attr_reader :recorded
-    attr_accessor :steps, :delay_between_cmd
+    attr_accessor :steps, :delay_between_cmd, :number_of_empty
     
     
     # Costructor
@@ -20,12 +20,13 @@ module Events
       @steps = 3
       @events_number = 0
       @delay_between_cmd = 5
+      @number_of_empty = 3
     end
     
     
     # Record touch events
-    # @param [Integer] time How long events should be recorded
-    # @param [String|Symbol] option Do clear staff if option is set to :drag_and_drop
+    # @param  [Integer] time How long events should be recorded
+    # @param  [String|Symbol|Optional] option Do clear staff if option is set to :drag_and_drop
     # @return [String] Returns events recorded entries
     def record(time, option=nil)
       clear
@@ -36,15 +37,12 @@ module Events
       t.kill
       pidof = `pidof -s adb shell getevent`
       `kill #{pidof}`
-      File.open("#{$PROJECT_PATH}/var/recorded") do |f|
-        @recorded = f.read
-      end
+      File.open("#{$PROJECT_PATH}/var/recorded") { |f| @recorded = f.read }
       `rm #{$PROJECT_PATH}/var/recorded`
       filter_only_events
       hex_to_dec
       clear_drag_and_drop if option.to_s == "drag_and_drop"
       clear_soft_drag_and_drop(@steps) if option.to_s == "soft_drag_and_drop"
-      puts @recorded
       @recorded
     end
     
@@ -84,13 +82,11 @@ module Events
     
     
     # Filter only touch events
-    # @note ADB can print some additional information. 
-    #       This method leaves only touch events and delete other information
+    # @note NOTE: ADB can print some additional information. 
+    #             This method leaves only touch events and delete other information
     def filter_only_events
       filtered = ''
-      @recorded.each_line do |line|
-        filtered += line if line =~ /^\/dev\/input\/event.*/
-      end
+      @recorded.each_line  { |line| filtered += line if line =~ /^\/dev\/input\/event.*/ }
       @recorded = filtered
     end
     
@@ -107,8 +103,8 @@ module Events
     
     
     # Clear events from ADB tool.
-    # @note ADB tool returns a lot events. It takes a lot time to reproduce action.
-    #       ADB needs only few first points and last to reproduce path
+    # @note NOTE: ADB tool returns a lot events. It takes a lot time to reproduce action.
+    #             ADB needs only few first points and last to reproduce path
     def clear_drag_and_drop
       if @recorded.lines.count > 20
         cleared = []
@@ -117,26 +113,24 @@ module Events
         cleared << table_to_clear[0..3]
         cleared << find_element_entry(table_to_clear, :first_0)
         cleared << find_element_entry(table_to_clear, :first_1)
-        0.upto(3) { cleared << find_element_entry(table_to_clear, :null) }
+        0.upto(@number_of_empty) { cleared << find_element_entry(table_to_clear, :null) }
         cleared << find_element_entry(table_to_clear, :last_0)
         cleared << find_element_entry(table_to_clear, :last_1)
-        0.upto(3) { cleared << find_element_entry(table_to_clear, :null) }
+        0.upto(@number_of_empty) { cleared << find_element_entry(table_to_clear, :null) }
         cleared << table_to_clear[last-1..last]
         cleared.flatten!
         
         @recorded = ''
-        cleared.each do |e|
-          @recorded += "#{e}\n"
-        end
+        cleared.each { |e| @recorded += "#{e}\n" }
       end
     end
     
     
     # Find specific element in table
-    # @note To drag something from one point to another we don't need point between start and end
-    #       ADB needs only information that process is working and another commands
-    # @param [Array] table Table contains recorded entries 
-    # @param [Symbol|String] type Type of search
+    # @note NOTE: To drag something from one point to another we don't need point between start and end
+    #             ADB needs only information that process is working and another commands
+    # @param  [Array] table Table contains recorded entries 
+    # @param  [Symbol|String] type Type of search
     # @return [String] Returns entry from table with recorded entries
     def find_element_entry(table, type)
       if type.to_s == "first_1"
@@ -164,8 +158,9 @@ module Events
     
     
     # Method to generate soft move between start and end points
-    # @param [Integer] steps Number of steps between start and end
+    # @param  [Integer] steps Number of steps between start and end
     # @return [String] Returns sequence
+    # @todo IMPROVE: There is hardcoded string. This string should be from recorded entries
     def clear_soft_drag_and_drop(steps)
       if @recorded.lines.count > 20
         cleared = []
@@ -176,23 +171,21 @@ module Events
         steps.each do |i|
           cleared << i[0]
           cleared << i[1]
-          0.upto(3) { |n| cleared << '/dev/input/event0 0 0 0' }
+          0.upto(@number_of_empty) { |n| cleared << '/dev/input/event0 0 0 0' }
         end
         cleared << table_to_clear[last-5..last]
         cleared.flatten!
         
         @recorded = ''
-        cleared.each do |e|
-          @recorded += "#{e}\n"
-        end
+        cleared.each { |e| @recorded += "#{e}\n" }
       end
     end
     
     
     # Method to find specific number of elements
-    # @note This method is used to build soft move
-    # @param [Array] table Entries where method should find specific entries
-    # @param [Integer] number Number of elements to find
+    # @note NOTE: This method is used to build soft move
+    # @param  [Array] table Entries where method should find specific entries
+    # @param  [Integer] number Number of elements to find
     # @return [Array] Returns array of entries
     def find_elements(table, number)
       list_of_moves = []

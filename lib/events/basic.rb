@@ -10,7 +10,6 @@ module Events
     # Map name of key to it number
     # @param [String|Symbol] name Name of event
     # @note Names are used from Android API (KeyEvent Class)
-    # @todo Write all codes from Android API
     def map_key(name)
       case name.to_s
       when "KEYCODE_0"                  then return "7"

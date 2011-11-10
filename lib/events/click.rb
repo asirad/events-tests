@@ -5,28 +5,28 @@ module Events
 
   
   # @author Asirad
-  # Class to create move sequences
+  # Class to create click sequences
   class Click < Basic
     
     
-    # Create new empty move
+    # Create new empty sequence
     def create
-      @move = ""
+      @sequence = ""
     end
     
     
-    # Add new or next move to sequence
+    # Add new or next click to sequence
     # @param [String|Symbol] key Name of key
-    # @note Names are used from Android API (KeyEvent Class)
+    # @note NOTE: Names are used from Android API (KeyEvent Class)
     def add(key)
       cmd = "input keyevent #{map_key(key)};"
-      @move == "" ? @move = cmd : @move = @move + cmd
+      @sequence == "" ? @sequence = cmd : @sequence = @sequence + cmd
     end
     
     
     # Use ADB program to execute sequence
     def run
-      `adb shell "#{@move}"`
+      `adb shell "#{@sequence}"`
     end
     
   end
