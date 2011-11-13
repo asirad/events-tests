@@ -55,7 +55,8 @@ module Events
     end
     
     
-    # Add last recorded touch events to touch sequence
+    # Add recorded touch to sequence
+    # @param [String] recorded Recorded event
     def add(recorded)
       @touch_seq[@events_number] = ''
       recorded.each_line { |line| @touch_seq[@events_number] += "adb shell sendevent #{line}" }
@@ -198,7 +199,18 @@ module Events
       matches << table.grep(/.*0003\s1\s.*/)
       step_size << matches[0].size.to_i / number
       step_size << matches[1].size.to_i / number
-      if step_size[0] > step_size[1]
+      
+      # Set step size as all steps if step size is lower than 1 
+      if step_size[0] <= 1 or step_size[1] <= 1
+        if matches[0].size > matches[1].size
+          selected_step_size = matches[0].size
+          selected_direction = 0
+        else
+          selected_step_size = matches[1].size
+          selected_direction = 0
+        end
+      # Set grater number as step size
+      elsif step_size[0] > step_size[1]
         selected_step_size = step_size[0]
         selected_direction = 0
       else
